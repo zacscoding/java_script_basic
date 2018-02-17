@@ -283,11 +283,267 @@ console.log(log_length(
 
 **p13 ES6 화살표 함수 활용 보기**  
 
----  
+
 
 <div id="1.3"></div>
 
 ## 1.3 함수형 자바스크립트의 실용성2
+
+### 1.3.1 회원 목록 중 한명 찾기  
+
+> filter를 사용   
+=> for문이 length까지 모두 순회
+
+```
+function filter(list, predicate) {
+  var new_list = [];
+  for (var i = 0, len = list.length; i < len; i++) {
+    if (predicate(list[i])) {
+      new_list.push(list[i]);
+    }
+  }
+
+  return new_list;
+}
+
+// filter를 통한 user.id==3 찾기
+console.log(filter(users, function (user) {
+  return user.id == 3;
+})[0]);
+```
+
+> break 문 사용  
+=> 재사용 불가능
+
+```
+// break
+var user;
+for (var i = 0, len = users.length; i < len; i++) {
+  console.log(i)
+  if (users[i].id == 3) {
+    user = users[i];
+    break;
+  }
+}
+console.log(user);
+```  
+
+> findById, findByName  
+
+```
+// find by id function
+console.log('find by id');
+
+function findById(list, id) {
+  for (var i = 0, len = users.length; i < len; i++) {
+    if (list[i].id == id) {
+      return list[i];
+    }
+  }
+}
+
+console.log(findById(users, 3));
+console.log(findById(users, 5));
+
+// find by name function
+console.log('find by name');
+function findByName(list, name) {
+  for (var i = 0, len = users.length; i < len; i++) {
+    if (list[i].name == name) {
+      return list[i];
+    }
+  }
+}
+console.log(findByName(users, 'BJ'));
+console.log(findByName(users, 'JE'));
+```  
+
+=> 중복이 있다는 점이 아쉬움(함수형적이지 못함)  
+
+> findBy  
+
+```
+// find by key
+console.log('find by key');
+
+function findBy(key, list, val) {
+  for (var i = 0, len = users.length; i < len; i++) {
+    if (list[i][key] === val) {
+      return list[i];
+    }
+  }
+}
+
+console.log(findBy('id', users, 3));
+console.log(findBy('name', users, 'BJ'));
+```  
+
+=> findBy함수는 앞으로 users, posts, comments 등 key로 value를 얻을 수 있는  
+객체들을 가진 배열이라면 무엇이든 받을 수 있음  
+
+- key가 아닌 메소드를 통해 값을 얻어야 할 때
+- 두 가지 이상의 조건이 필요할 때
+- ===이 아닌 다른 조건으로 찾고자 할 때
+
+### 1.3.2 값에서 함수로  
+
+```
+function find(list, predicate) {
+  for (var i = 0, len = list.length; i < len; i++) {
+    if (predicate(list[i])) {
+      return list[i];
+    }
+  }
+}
+
+console.log(find(users2, function (u) {
+  return u.getAge() == 25;
+}).getName());
+console.log(find(users2, function (u) {
+  return u.getName().indexOf('P') != -1;
+}));
+console.log(find(users2, function (u) {
+  return u.getAge() == 32 && u.getName() == 'JM';
+}));
+console.log(find(users2, function (u) {
+  return u.getAge() < 30;
+}).getName());
+```  
+
+=> 객체지향 프로그래밍이 약속된 이름의 메소드를 대신 실행해주는 식으로  
+외부 객체에게 위임한다면, 함수형 프로그래밍은 보조 함수를 통해 완전히  
+위임하는 방식을 취함  
+
+### 1.3.3 함수를 만드는 함수와 find, filter 조합하기  
+
+> bmatch1  
+
+```
+// bmatch1로 predicate 만들기
+// key, val을 미리 받아 나중에 들어올 obj와 비교하는 익명함수를 클로저로 만들어 리턴
+console.log('Test bmatch1');
+
+function bmatch1(key, val) {
+  return function (obj) {
+    return obj[key] === val;
+  }
+}
+
+console.log(find(users, bmatch1('id', 1)));
+console.log(find(users, bmatch1('name', 'HI')));
+console.log(find(users, bmatch1('age', 27)));
+```
+
+> 여러 개의 key에 해당하는 value들을 비교하는 함수  
+
+```
+function object(key, val) {
+  var obj = {};
+  obj[key] = val;
+  return obj;
+}
+
+function match(obj, obj2) {
+  for (var key in obj2) {
+    if (obj[key] !== obj2[key]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function bmatch(obj2, val) {
+  if (arguments.length == 2) {
+    obj2 = object(obj2, val);
+  }
+  return function (obj) {
+    return match(obj, obj2);
+  }
+}
+
+console.log(match(find(users, bmatch('id', 3), find(users, bmatch('name', 'BJ')))));
+console.log(find(users, function (u) {
+  return u.age == 32 && u.name == 'JM';
+}));
+console.log(find(users, bmatch({name: 'JM', age: 32})));
+```
+
+> findIndex  
+
+```
+function findIndex(list, predicate) {
+  for (var i = 0, len = list.length; i < len; i++) {
+    if (predicate(list[i])) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+console.log(findIndex(users, bmatch({name: 'JM', age: 32}))); // 5
+console.log(findIndex(users, bmatch({age: 36}))); // -1
+```
+
+---
+
+### 1.3.4 고차 함수  
+; 고차 함수 : 함수를 인자로 받거나 함수를 리턴하는 함수  
+
+=> map, filter, find, findIndex는 Unserscore.js에 있는 함수들  
+
+> 인자 늘리기
+
+```
+var _ = {};
+_.map = function (list, iteratee) {
+  var new_list = [];
+  for (var i = 0, len = list.length; i < len; i++) {
+    new_list.push(iteratee(list[i], i, list));
+  }
+  return new_list;
+};
+
+_.filter = function (list, predicate) {
+  var new_list = [];
+  for (var i = 0, len = list.length; i < len; i++) {
+    if (predicate(list[i], i, list)) {
+      new_list.push(list[i]);
+    }
+  }
+  return new_list;
+}
+
+_.find = function (list, predicate) {
+  for (var i = 0, len = list.length; i < len; i++) {
+    if (predicate(list[i], i, list)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+// predicate에서 두 번째 인자 사용하기
+console.log('_underscore');
+console.log(_.filter([1, 2, 3, 4], function (val, idx) {
+  return idx > 1;
+}));
+// [3,4]
+console.log(_.filter([1, 2, 3, 4], function (val, idx) {
+  return idx % 2 == 0;
+}));
+// [1,3]
+```  
+
+### 1.3.5 ```function identity(v) {return v;}```
+
+
+
+
+
+
+
+
 
 
 
