@@ -7,6 +7,7 @@
 - <a href="#1.1">1.1 함수형 프로그래밍 그거 먹는 건가요?</a>
 - <a href="#1.2">1.2 함수형 자바스크립트의 실용성</a>
 - <a href="#1.3">1.3 함수형 자바스크립트의 실용성2</a>
+- <a href="#1.4">1.4 함수형 자바스크립트를 위한 기초</a>
 
 
 - <a href="#"></a>
@@ -535,7 +536,198 @@ console.log(_.filter([1, 2, 3, 4], function (val, idx) {
 // [1,3]
 ```  
 
-### 1.3.5 ```function identity(v) {return v;}```
+### 1.3.5 ```function identity(v) {return v;}```  
+
+> Underscore.js에 존재하는 identity  
+
+```
+_.identity = function(v) { return v; }
+var a = 10;
+console.log(_.identity(a));
+```
+
+> predicate로 _.identity를 사용한 경우  
+
+```
+_.identity = function (v) {
+  return v;
+}
+console.log(_.filter([true, 0, 10, 'a', false, null], _.identity));
+// [true, 10, 'a']
+```  
+
+=> Truthy Values(Boolean으로 평가했을 때, true로 평가 되는 값들)  
+
+**참고**  
+Boolean으로 평가했을 때 false  
+== false, undefined, null, 0, NaN, ""  
+
+```
+_.falsy = function (v) {
+  return !v;
+}
+
+_.truthy = function (v) {
+  return !!v;
+}
+
+var booleanTests = [];
+booleanTests.push(false);
+booleanTests.push(undefined);
+booleanTests.push(null);
+booleanTests.push(0);
+booleanTests.push(NaN);
+booleanTests.push('');
+for(var i=0, len = booleanTests.length; i<len; i++) {
+  console.log(_.falsy(booleanTests[i])); // true
+  console.log(_.truthy(booleanTests[i])); // false
+}
+```  
+
+> some, every 만들기1)    
+
+```
+// 하나라도 긍정적인 값이면 true , 그 외 false
+_.some = function (list) {
+  return !!_.find(list, _.identity);
+}
+
+// 모두 긍정적인 값이면 true, 그 외 false
+_.every = function (list) {
+  return _.filter(list, _.identity).length == list.length;
+}
+
+console.log(_.some([0, null, 2])); // true
+console.log(_.some([0, null, false])); // false
+
+console.log(_.every([0, null, 2])); // false
+console.log(_.every([{}, true, 2])); // true
+```   
+
+=> 아쉬운 점  
+- _.every는 filter를 사용하므로 루프를 끝까지 돌게 됨
+
+### 1.3.6 연산자 대신 함수로  
+
+```
+function not(v) {
+  return !v;
+}
+
+function beq(a) {
+  return function (b) {
+    return a === b;
+  }
+}
+
+_.some = function (list) {
+  return !!_.find(list, _.identity);
+}
+
+_.every = function (list) {
+  return beq(-1)(_.findIndex(list, not));
+}
+console.log(_.some([0, null, 2])); // true
+console.log(_.some([0, null, false])); // false
+console.log(_.every([0, null, 2])); // false
+console.log(_.every([{}, true, 2])); // true
+```  
+
+=> not은 연산자 !가 아닌 함수이기 때문에, _.findIndex와 사용가능  
+=> 리스트 값 중 하나라도 부정적인 값을 만나면, predicate가 not이므로  
+true를 리턴하여 findIndex는 i값을 리턴  
+
+> 함수 쪼개기  
+
+```
+function positive(list) {
+  return _.find(list, _.identity);
+}
+
+function negativeIndex(list) {
+  return _.findIndex(list, not);
+}
+
+_.some = function (list) {
+  return not(not(positive(list)));
+}
+_.every = function (list) {
+  return beq(-1)(negativeIndex(list));
+}
+console.log(_.some([0, null, 2])); // true
+console.log(_.some([0, null, false])); // false
+console.log(_.every([0, null, 2])); // false
+console.log(_.every([{}, true, 2])); // true
+```
+
+### 1.3.7 함수 합성  
+; 함수를 쪼갤수록 함수 합성은 쉬워짐  
+
+> Underscore.js의 내부 코드  
+
+```
+_.compose = function () {
+  var args = arguments;
+  var start = args.length - 1;
+  return function () {
+    var i = start;
+    var result = args[start].apply(this, arguments);
+    while (i--) {
+      result = args[i].call(this, result);
+    }
+    return result;
+  };
+}
+
+var greet = function (name) {
+  return "hi : " + name;
+}
+var exclaim = function (statement) {
+  return statement.toUpperCase() + "!";
+}
+var welcome = _.compose(greet, exclaim);
+console.log(welcome("zac")); // "hi : ZAC!"
+```  
+
+=> exclaim의 "zac"을 매개변수 -> "ZAC!" 반환 -> greet의 "ZAC!" 매개변수  
+-> "hi : ZAC!" 반환  
+
+> _.compose로 함수 합성하기  
+
+```
+// 기존
+_.some = function (list) {
+  return not(not(positive(list)));
+}
+_.every = function (list) {
+  return beq(-1)(negativeIndex(list));
+}
+
+// compose 이용
+_.some = _.compose(not, not, positive);
+_.every = _.compose(beq(-1), negativeIndex);
+```  
+
+=> 값 대신 함수로, for와 if 대신 고차 함수와 보조 함수로,
+연산자 대신 함수로, 함수 합성 등 함수적 기법을 사용하면 코드도 간결해지고  
+함수명을 통해 로직을 더 명확히 전달할 수 있어 읽기 좋은 코드가 된다  
+
+---  
+
+<div id="1.4"></div>
+
+## 1.4 함수형 자바스크립트를 위한 기초
+
+
+
+
+
+
+
+
+
+
+
 
 
 
