@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+
+<!-- 일급 함수 -->
+<script>
+  // 1) f1은 함수를 값으로 다룰 수 있음을 보여줌.
+  // typeof를 이용하여 함수인지 확인하고 변수 a에 f1을 담아줌.
+  function f1() {
+  }
+
+  var a = typeof f1 == 'function' ? f1 : function () {
+  };
+
+  // 2) f2는 함수를 리턴한다.
+  function f2() {
+    return function () {
+    };
+  }
+
+  // 3) a와b를 더하는 익명 함수를 선언하였으며, a와 b에 각각 10,5를 전달하여 즉시실행
+  (function (a, b) {
+    return a + b;
+  })(10, 5);
+
+  // 4) callAndAdd를 실행하면서 익명 함수들을 선언했고 바로 인자로 사용
+  // callAndAdd는 넘겨받은 함수 둘을 실행하여 결과들을 더한다.
+  function callAndAdd(a, b) {
+    return a() + b();
+  }
+
+  callAndAdd(function () {
+    return 10;
+  }, function () {
+    return 5;
+  });
+</script>
+
+<!-- 클로저 -->
+<script>
+  console.log('start closure...');
+
+  function parent() {
+    var a = 5;
+
+    function myfn() {
+      console.log(a);
+    }
+
+    // 생략..
+  }
+
+  function parent2() {
+    var a = 5;
+
+    function parent1() {
+      function myfn() {
+        console.log(a);
+      }
+
+      // 생략..
+    }
+
+    // 생략..
+  }
+
+  ///////////////////////////
+  var a = 10;
+  var b = 20;
+
+  function f1() {
+    return a + b;
+  }
+
+  console.log(f1()); // 30
+
+  ///////////////////////////
+  function f2() {
+    var a = 10;
+    var b = 20;
+
+    function f3(c, d) {
+      return c + d;
+    }
+
+    return f3;
+  }
+
+  var f4 = f2();
+  console.log(f4(5, 7)); // 12
+
+  ///////////////////////////
+  function f4() {
+    var a = 10;
+    var b = 20;
+
+    function f5() {
+      return a + b;
+    }
+
+    return f5();
+  }
+
+  console.log(f4());
+
+  //////////////////////////
+  function f6() {
+    var a = 10;
+
+    function f7(b) {
+      return a + b;
+    }
+
+    return f7;
+  }
+
+  var f8 = f6();
+  console.log(f8(20)); // 30
+  console.log(f8(10)); // 20
+
+  //////////////////////////
+  function f9() {
+    var a = 10;
+    var f10 = function (c) {
+      return a + b + c;
+    };
+    var b = 20;
+    return f10;
+  }
+
+  var f11 = f9();
+  console.log(f11(30)); // 60
+
+</script>
+
+<!-- 클로저 실용 사례 -->
+<script>
+  console.log('closure examples...');
+
+</script>
+
+</body>
+</html>
